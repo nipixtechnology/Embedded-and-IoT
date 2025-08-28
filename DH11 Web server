@@ -1,0 +1,80 @@
+#include <WiFi.h>
+#include <WebServer.h>
+#include "DHT.h"
+
+// WiFi credentials
+const char* ssid = "Prashanth 4G";
+const char* password = "6382734405";
+
+// Web server on port 80
+WebServer server(80);
+
+// DHT Sensor setup
+#define DHTPIN 4       // DHT11 data pin connected to GPIO4
+#define DHTTYPE DHT11  // DHT11 or DHT22
+DHT dht(DHTPIN, DHTTYPE);
+
+// Optional analog sensor
+int analogPin = 34;  
+
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+
+  // Connect to WiFi
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi connected!");
+  Serial.print("ESP32 IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  // Route: main dashboard
+  server.on("/", []() {
+    String page = "<!DOCTYPE html><html>";
+    page += "<head><title>ESP32 Sensor Dashboard</title>";
+    page += "<style>body{font-family:Arial;text-align:center;}</style></head>";
+    page += "<body><h1>ESP32 Sensor Data</h1>";
+    page += "<p><b>Temperature:</b> <span id='temp'>--</span> °C</p>";
+    page += "<p><b>Humidity:</b> <span id='hum'>--</span> %</p>";
+    page += "<p><b>Analog Sensor:</b> <span id='analog'>--</span></p>";
+    page += "<script>";
+    page += "function fetchData(){";
+    page += "fetch('/data').then(r=>r.json()).then(d=>{";
+    page += "document.getElementById('temp').innerText=d.temp;";
+    page += "document.getElementById('hum').innerText=d.hum;";
+    page += "document.getElementById('analog').innerText=d.analog;";
+    page += "});}";
+    page += "setInterval(fetchData, 5000);";  // every 5 sec
+    page += "fetchData();";  // initial call
+    page += "</script>";
+    page += "</body></html>";
+
+    server.send(200, "text/html", page);
+  });
+
+  // Route: send sensor data as JSON
+  server.on("/data", []() {
+    float temp = dht.readTemperature();
+    float hum = dht.readHumidity();
+    int analogVal = analogRead(analogPin);
+
+    String json = "{";
+    json += "\"temp\":" + String(temp) + ",";
+    json += "\"hum\":" + String(hum) + ",";
+    json += "\"analog\":" + String(analogVal);
+    json += "}";
+    server.send(200, "application/json", json);
+  });
+
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+}
