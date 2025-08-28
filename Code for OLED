@@ -1,0 +1,72 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include "DHT.h"
+
+// OLED setup
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// DHT11 setup
+#define DHTPIN 2
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(9600);
+
+  // Initialize OLED
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    while (1);
+  }
+  display.clearDisplay();
+  display.display();
+
+  // Initialize DHT11
+  dht.begin();
+}
+
+void loop() {
+  // Read sensor
+  float h = dht.readHumidity();
+  float t = dht.readTemperature(); // Celsius
+
+  // Check sensor errors
+  if (isnan(h) || isnan(t)) {
+    Serial.println(F("Failed to read from DHT11!"));
+    return;
+  }
+
+  // Print to Serial Monitor
+  Serial.print(F("Humidity: "));
+  Serial.print(h);
+  Serial.print(F("%  Temperature: "));
+  Serial.print(t);
+  Serial.println(F("°C"));
+
+  // Display on OLED
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println(F("DHT11 Sensor"));
+
+  display.setTextSize(2);
+  display.setCursor(0, 20);
+  display.print(F("T:"));
+  display.print(t, 1);
+  display.print((char)247); // degree symbol
+  display.println(F("C"));
+
+  display.setCursor(0, 45);
+  display.print(F("H:"));
+  display.print(h, 0);
+  display.println(F("%"));
+
+  display.display();
+
+  delay(2000); // wait before next update
+}
