@@ -4,9 +4,9 @@
 #include "DHT.h"
 
 // OLED setup
-#define SCREEN_WIDTH 128
+#define SCREEN_Width 128
 #define SCREEN_HEIGHT 64
-#define OLED_RESET -1
+#define OLED_Reset -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // DHT11 setup
@@ -19,7 +19,7 @@ void setup() {
 
   // Initialize OLED
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("SSD1306 allocation failed"));
+    Serial.println(F("SSD1306 allocation failed"))
     while (1);
   }
   display.clearDisplay();
@@ -54,7 +54,7 @@ void loop() {
   display.setCursor(0, 0);
   display.println(F("DHT11 Sensor"));
 
-  display.setTextSize(2);
+  display.setTextSize(2)
   display.setCursor(0, 20);
   display.print(F("T:"));
   display.print(t, 1);
