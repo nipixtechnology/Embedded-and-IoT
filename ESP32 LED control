@@ -1,0 +1,30 @@
+// ESP32: Control LED via Serial Monitor
+
+int ledPin = 2;   // Onboard LED on most ESP32 boards
+String command = ""; // Store user input
+
+void setup() {
+  pinMode(ledPin, OUTPUT);   // LED pin as OUTPUT
+  Serial.begin(115200);      // Start Serial Monitor at 115200 baud
+  Serial.println("Type ON or OFF to control LED:");
+}
+
+void loop() {
+  // Check if data is available from Serial Monitor
+  if (Serial.available() > 0) {
+    command = Serial.readStringUntil('\n');  // Read until Enter key pressed
+    command.trim();  // Remove extra spaces/newlines
+
+    if (command.equalsIgnoreCase("ON")) {
+      digitalWrite(ledPin, HIGH);
+      Serial.println("LED is ON");
+    } 
+    else if (command.equalsIgnoreCase("OFF")) {
+      digitalWrite(ledPin, LOW);
+      Serial.println("LED is OFF");
+    } 
+    else {
+      Serial.println("Invalid Command! Type ON or OFF");
+    }
+  }
+}
