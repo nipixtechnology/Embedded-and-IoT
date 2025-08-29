@@ -1,61 +1,77 @@
 #include <WiFi.h>
-#include "DHT.h"
-#include "ThingSpeak.h"
+#include <WebServer.h>  // Simple web server library
 
-#define DHTPIN 4          // DHT11 connected to GPIO4
-#define DHTTYPE DHT11
-DHT dht(DHTPIN, DHTTYPE);
+// Replace with your WiFi credentials
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
 
-const char* ssid = "Prashanth 4G";      
-const char* password = "6382734405";
+WebServer server(80);   // Web server on port 80
+int ledPin = 2;         // Onboard LED (GPIO2)
 
-WiFiClient client;
-
-// ThingSpeak Settings
-unsigned long myChannelNumber = 3049691;
-const char* myWriteAPIKey = "HXKBYJLK94RBZ83I";
+// Serve HTML page (you could also load from SPIFFS)
+const char webpage[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP32 LED Control</title>
+  <style>
+    body { text-align: center; font-family: Arial; background: #f2f2f2; }
+    h1 { color: #333; }
+    button {
+      padding: 15px 30px;
+      margin: 10px;
+      font-size: 18px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+    }
+    .on { background: green; color: white; }
+    .off { background: red; color: white; }
+  </style>
+</head>
+<body>
+  <h1>ESP32 LED Control</h1>
+  <button class="on" onclick="fetch('/LED=ON')">Turn ON</button>
+  <button class="off" onclick="fetch('/LED=OFF')">Turn OFF</button>
+</body>
+</html>
+)rawliteral";
 
 void setup() {
   Serial.begin(115200);
-  dht.begin();
+  pinMode(ledPin, OUTPUT);
 
+  // Connect to WiFi
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(ssid);
   WiFi.begin(ssid, password);
-  Serial.print("Connecting to WiFi");
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.print(".");
   }
   Serial.println("\nWiFi Connected!");
-  
-  ThingSpeak.begin(client);  // Initialize ThingSpeak
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  // Define server routes
+  server.on("/", []() {
+    server.send(200, "text/html", webpage);
+  });
+
+  server.on("/LED=ON", []() {
+    digitalWrite(ledPin, HIGH);
+    server.send(200, "text/plain", "LED is ON");
+  });
+
+  server.on("/LED=OFF", []() {
+    digitalWrite(ledPin, LOW);
+    server.send(200, "text/plain", "LED is OFF");
+  });
+
+  server.begin();
 }
 
 void loop() {
-  float temp = dht.readTemperature();
-  float hum = dht.readHumidity();
-
-  if (isnan(temp) || isnan(hum)) {
-    Serial.println("Failed to read from DHT sensor!");
-    return;
-  }
-
-  Serial.print("Temperature: ");
-  Serial.print(temp);
-  Serial.print(" °C, Humidity: ");
-  Serial.print(hum);
-  Serial.println(" %");
-
-  // Send data to ThingSpeak
-  ThingSpeak.setField(1, temp);  // Field1 = Temperature
-  ThingSpeak.setField(2, hum);   // Field2 = Humidity
-
-  int status = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
-  
-  if (status == 200) {
-    Serial.println("Data sent to ThingSpeak successfully!");
-  } else {
-    Serial.println("Error sending data: " + String(status));
-  }
-
-  delay(20000); // ThingSpeak allows update every 15-20 sec
+  server.handleClient();
 }
